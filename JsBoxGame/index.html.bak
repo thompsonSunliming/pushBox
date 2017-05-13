@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="Generator" content="EditPlus®">
+  <meta name="Author" content="">
+  <meta name="Keywords" content="">
+  <meta name="Description" content="">
+  <title>Document</title>
+  <style>
+	*{margin:0px;padding:0px;}
+	body{background:#333;}
+	#wrap{
+		margin:50px auto 20px;
+		background:url('img/block.gif');
+		border:10px solid rgb(50,205,50);
+		position:relative;
+	}
+	#wrap div{
+		position:absolute;
+		width:35px;
+		height:35px;
+		transition:0.3s;
+	}
+	#wrap div img{
+		position:absolute;
+	} 
+	#wrap div.wall img{
+		bottom:0px;
+	}
+	#wrap div.box img{
+		bottom:0px;
+	}
+	#wrap div.ball img{
+		left:50%;top:50%;
+		margin-left:-15px;
+		margin-top:-15px;
+	}
+	#wrap div.person img{
+		left:50%;bottom:0;
+		margin-left:-25px;
+	}
+	.function{
+		width:580px;
+		height:40px;
+		position:absolute;
+		left:50%;margin-left:-290px;
+	}
+	.function a{
+		text-decoration:none;
+		display:block;
+		float:left;
+		width:80px;height:35px;
+		border-radius:3px;
+		margin:0 5px 0;
+		text-align:center;
+		font:16px/35px 'Microsoft yahei';
+		box-shadow:4px 0 4px rgba(0,0,0,0.5),0 4px 4px rgba(0,0,0,0.5);
+		background:rgba(50,205,50,1);
+		color:#fff;
+	}
+	.function a#stepNum{
+		width:120px;	
+	}
+	.function span{
+		color:red;
+		font-weight:bold;
+		margin:0 8px;
+	}
+	.explain{
+		height:242px;
+		position:absolute;
+		top:0px;
+		right:10%;
+		background:rgba(0,0,0,0.5);
+		border-radius:5px;
+		font-size:12px;
+		padding:10px;
+		margin:0 auto;
+		color:#fff;
+	}
+	#toggleMove{
+		height:20px;
+		width:100%;
+		text-align:center;
+		position:absolute;
+		cursor:pointer;
+		transform:scale(1.5);
+		z-index:9999;
+	}	
+	.arrow{
+		background: url('img/arrow.png') no-repeat center 0;
+		bottom:0;
+	}
+	.close{
+		background: url('img/arrow.png') no-repeat center -40px;
+		bottom:-18px;
+	}
+	.explain h2{
+		text-align:center;
+	}
+	.explain p{
+		margin:5px;
+	}
+	.explain p span{
+		color:#ffff33;
+		margin-right:10px;
+	}
+  </style>
+ </head>
+ <body>
+  <div id='wrap'>
+  </div>
+  <div class='function'>
+	<a id='prev' href='javascript:void(0)'>返回一步</a>
+	<a id='prevL' href='javascript:void(0)'>上一关</a>
+	<a href='javascript:void(0)'>第<span id='levelNum'></span>关</a>
+	<a id='nextL' href='javascript:void(0)'>下一关</a>
+	<a id='autoPassL' href='javascript:void(0)'>自动过关</a>
+	<a id='stepNum' href='javascript:void(0)'>移动步数：<span>0</span></a>
+  </div>
+   <div class='explain'>
+	<h2>玩法介绍说明</h2>
+	<div id='toggleMove' class='arrow'></div>
+	<p><span>投注方式：</span>请您选择您的投注号码后‘添加号码’==>‘提交注单’==>‘立即投注’</p>
+	<p><span>三星玩法：</span>至少需要在‘百位’、‘十位’、‘个位’三个位置中选择一个号码投注，开奖号码后三位与您投注号码一致即中奖</p>
+	<p><span>定位胆玩法：</span>从任意一个位置选择一个号码即可投注，开奖号码与投注号码的位置、号码相同即中奖</p>
+	<p><span>大小单双玩法：</span>至少需要在‘百位’、‘十位’中选择一个号码投注，开奖号码与投注号码的位置、形态相同即中奖</p>
+	<p><span>功能：</span>可自由选择投注模式、倍数，可点击‘&times;’删除提交注单</p>
+	<p><span>扩展：</span>可使用jsonp引用官方彩票开奖数据（实时开奖），更多玩法添加请联系我</p>
+	<p><span>Author:</span>玄武弟子—-德芙</p>
+	<p><span>转载：</span></p>
+  </div>
+  <script>
+	window.onload=function(){
+		Game.exe();
+	}
+	//游戏Game
+	Game={
+		oWrap:document.getElementById('wrap'),
+		oCount:document.getElementById('stepNum').children[0],
+		//步数初始化
+		stepNum:0,
+		//关数初始化
+		level:0,
+		//行列初始化
+		size:{x:16,y:16},
+		//控制函数
+		exe:function(){
+			var This=Game;
+			//地图的宽高
+			this.oWrap.style.cssText='width:'+this.size.x*35+'px;height:'+this.size.y*35+'px';
+			//回步执行
+			document.getElementById('prev').onclick=function(){
+				This.prev();
+			};
+			//下一关
+			document.getElementById('nextL').onclick=function(){
+				if(This.level < This.mapData.length)
+				{
+					This.level++;
+				}else{
+					alert('亲，已经是最后一关了哟');
+				}
+				This.map(This.mapData[This.level]);
+				This.levelNum(This.levelNum);
+
+			};
+			//上一关
+			document.getElementById('prevL').onclick=function(){
+				if(This.level > 0)
+				{
+					This.level--;
+				}else{
+					alert('亲，已经是第一关了哟！');
+				}
+				This.map(This.mapData[This.level]);
+				This.levelNum(This.levelNum);
+			};//自动过关演示
+			document.getElementById('autoPassL').onclick=function(){
+				This.map(This.mapData[This.level]);
+				var oP=This.getClass('person',This.oWrap)[0];
+				var oPerson=oP.children[0];
+				var autoStep=0;
+				//定时器室person自动行走
+				var timer=setInterval(function(){
+					//调取keyCode数据
+					var keyCode=This.passLevelArr[This.level][autoStep];
+					This.controlFn(oP , oPerson , keyCode);
+					autoStep++;
+					//自动行走的step == 存储数据的长度停止定时器
+					if(autoStep==This.passLevelArr[This.level].length){
+						clearInterval(timer);
+					}
+				},500);
+			}
+			this.map(this.mapData[this.level]);
+			this.levelNum(this.levelNum);
+		},
+		
+		//创建地图
+		map:function(lv){
+			//创建之前初始化数据
+			this.oWrap.innerHTML='';
+			var oDiv,oImg,oPerson;
+			this.stepNum = 0;
+			this.step.person.length = 0;
+			this.step.box.length = 0;
+			this.oCount.innerHTML = this.stepNum;
+			//设置地图里面的物体摆放位置
+			for (var i=0;i<this.size.x*this.size.y;i++ )
+			{
+				//设置每个格子的坐标
+				var x=i%16;
+				var y=parseInt(i/16);
+				//询问分别添加1:树、2:球、3:箱子、4:人物
+				switch(lv[i])
+				{
+					case 1:
+						addElement();
+						oDiv.className='wall';
+						oImg.src='img/wall.png';
+						break;
+					case 2:
+						addElement();
+						oDiv.className='ball';
+						oImg.src='img/ball.png';
+						oDiv.style.zIndex=0;
+						break;
+					case 3:
+						addElement();
+						oDiv.className='box';
+						oImg.src='img/box.png';
+						break;
+					case 4:
+						addElement();
+						oDiv.className='person';
+						oImg.src='img/down.png';
+						oPerson=oImg;
+						break;
+				}
+			}
+			//创建一个添加元素（1:树、2:球、3:箱子、4:人物）的函数
+			//每个IMG外面套一个Div，后面可以通过控制Div，改变图片的位置
+			function addElement(){
+				var This=Game;
+				oDiv=document.createElement('div');
+				//通过坐标和关卡数组的值定位元素位置
+				oDiv.x=x;  //存一下Div的X坐标
+				oDiv.y=y;	//存一下Div的Y坐标	
+				//根据坐标来设置oDiv的位置和index
+				oDiv.style.cssText='top:'+y*35+'px;left:'+x*35+'px;z-index:'+(y*This.size.x)+';';
+				oImg=new Image();
+				oDiv.appendChild(oImg);
+				Game.oWrap.appendChild(oDiv);
+			}
+			this.controlPerson(oPerson);
+		},
+		//控制人物
+		controlPerson:function(oPerson){
+			var This=this;
+			var oP=oPerson.parentNode;
+			document.onkeydown=function(ev){
+				var ev=ev||window.event;
+				var keyCode=ev.keyCode;
+				This.controlFn(oP ,oPerson ,keyCode);
+				switch(keyCode)
+				{
+					case 37:
+					case 38:
+					case 39:
+					case 40:
+					if(keyCode==37 || keyCode==38 || keyCode==39 || keyCode==40)
+					{
+						return false;
+						break;
+					}
+				}
+			}
+		},
+		//控制人物函数
+		controlFn:function(oP,oPerson,keyCode){
+			var This=Game;
+			//存储每一步person的src
+			This.step.person[This.stepNum]={};
+			This.step.person[This.stepNum].src=oP.children[0].src;
+			switch(keyCode)
+			{
+				// ← 左
+				case 37:
+					oPerson.src='img/left.png';  //按方向键←，改变人物朝向左
+					This.personMove({x:-1} ,oP);
+					break;
+				// ↑ 上
+				case 38:
+					oPerson.src='img/up.png';  //按方向键↑，改变人物朝向上
+					This.personMove( {y:-1} ,oP);
+					break;
+				// → 右
+				case 39:
+					oPerson.src='img/right.png';  //按方向键→，改变人物朝向右
+					This.personMove( {x:1} ,oP);
+					break;
+				// ↓ 下
+				case 40:
+					oPerson.src='img/down.png';  //按方向键↓，改变人物朝向下
+					This.personMove( {y:1} ,oP);
+					break;
+			}
+		},
+		//人物移动
+		personMove:function(json , oP ){
+			var This = this;
+			var x=json.x || 0;
+			var y=json.y || 0;
+			var oBox=this.getClass('box',this.oWrap);
+			//通过改变person x、y的坐标，重新获取新一点的坐标，x+y*16返回新一点数组的位置，然后判断是否是树也就是!=1，然后改变perser的位置
+			if(this.mapData[this.level][(oP.x+x)+(oP.y+y)*this.size.x] != 1)
+			{
+				//存储每一步的person坐标
+				this.step.person[this.stepNum].x=oP.x;
+				this.step.person[this.stepNum].y=oP.y;
+				//刷新新一点的坐标
+				oP.x=oP.x+x;
+				oP.y=oP.y+y;
+				//重新设定person的位置
+				oP.style.left=oP.x*35+'px';
+				oP.style.top=oP.y*35+'px';
+				oP.style.zIndex=oP.x+oP.y*this.size.x;
+				//步数存储
+				this.stepNum++;
+				//循环Box进行Box运动判断
+				for (var i=0;i<oBox.length;i++ )
+				{
+					//当person的坐标==Box坐标 ,person和Box的位置重合
+					if(oBox[i].x==oP.x && oBox[i].y==oP.y)
+					{
+						//判读Box是否撞上树（Box的坐标减去移动的x、y返回数组里位置进行判断是否== 1）
+						if(this.mapData[this.level][(oBox[i].x+x)+(oBox[i].y+y)*this.size.x] != 1)
+						{
+							//没有撞上树并且没有Box碰撞产生（collision函数返回true执行），改变Box的坐标和位置
+							if( this.collision(oBox[i],x,y) ){
+								//Box的数据存储
+								this.step.box[this.stepNum-1]={};
+								this.step.box[this.stepNum-1].index=i;
+								this.step.box[this.stepNum-1].x=oBox[i].x;
+								this.step.box[this.stepNum-1].y=oBox[i].y;
+								//Box的移动（改变Box的坐标和位置）
+								oBox[i].x=oBox[i].x+x;
+								oBox[i].y=oBox[i].y+y;
+								oBox[i].style.left=oBox[i].x*35+'px';
+								oBox[i].style.top=oBox[i].y*35+'px';
+								oBox[i].style.zIndex=oBox[i].y*this.size.x;
+								//触发过关检测
+								this.passLevel();
+							}else{
+							//person与Box碰撞产生（collision函数返回false执行）
+								oP.x=oP.x-x;
+								oP.y=oP.y-y;
+								oP.style.left=oP.x*35+'px';
+								oP.style.top=oP.y*35+'px';
+								oP.style.zIndex=oP.x+oP.y*this.size.x;
+								//person与Box碰撞产生，不少--并删除数据
+								this.stepNum--;
+								this.step.person.pop();
+							}
+						}else
+						{
+							//person与树碰撞产生，人物返回原来的位置
+							oP.x=oP.x-x;
+							oP.y=oP.y-y;
+							oP.style.left=oP.x*35+'px';
+							oP.style.top=oP.y*35+'px';
+							oP.style.zIndex=oP.x+oP.y*this.size.x;
+							//person与树碰撞产生，删除移动的坐标数据
+							this.stepNum--;
+							this.step.person.pop();
+						}
+					}
+				}
+			}
+			this.oCount.innerHTML = this.stepNum;
+		},
+		//判断Box与Box的碰撞
+		collision:function(obj,x,y){
+			var oBox=this.getClass('box',this.oWrap);
+			for (var i=0;i<oBox.length;i++ )
+			{
+				//判断当前推动的Box加上x、y和是否和与其他Box的坐标，如果相等返回false,否则返回true
+				if(oBox[i] != obj){
+					if(oBox[i].x==obj.x+x && oBox[i].y==obj.y+y )
+					{
+						return false;
+						break;
+					}
+				}
+			}
+			return true;
+		},
+		//回步数据存储，person与Box分开存储
+		step:{
+			person:[],
+			box:[]
+		},
+		//回步函数
+		prev:function(){
+			var This=Game;
+			var oP=This.getClass('person',This.oWrap)[0];
+			var oBoxData;
+			//步数不大于0时执行
+			if(This.stepNum != 0)
+			{
+				//person数据回步
+				oP.x=This.step.person[This.stepNum-1].x;
+				oP.y=This.step.person[This.stepNum-1].y;
+				oP.style.left=oP.x*35+'px';
+				oP.style.top=oP.y*35+'px';
+				oP.style.zIndex=oP.x+oP.y*This.size.x;
+				oP.children[0].src=This.step.person[This.stepNum-1].src;
+				//如果要返回的step中存储了Box的数据时，Box也一并回步
+				if(This.step.box[This.stepNum-1])
+				{
+					var oBox=This.getClass('box',This.oWrap);
+					oBoxData=oBox[This.step.box[This.stepNum-1].index];
+					oBoxData.x=This.step.box[This.stepNum-1].x;
+					oBoxData.y=This.step.box[This.stepNum-1].y;
+					oBoxData.style.left=oBoxData.x*35+'px';
+					oBoxData.style.top=oBoxData.y*35+'px';
+					oBoxData.style.zIndex=oBoxData.y*this.size.x;
+				}
+				This.stepNum--;
+				This.oCount.innerHTML = This.stepNum;
+			}else{
+				alert('哎呀！最后一步退不了！');
+			}
+		},
+		//过关检测
+		passLevel:function(){
+			var oBall=this.getClass('ball',this.oWrap);
+			var oBox=this.getClass('box',this.oWrap);
+			var passNum=0;
+			for (var i=0;i<oBall.length;i++ )
+			{
+				for (var j=0;j<oBox.length;j++ )
+				{
+					if(oBall[i].x==oBox[j].x && oBall[i].y==oBox[j].y)
+					{
+						passNum++;
+						if(passNum==oBall.length){
+							alert('智商太高了，恭喜过关!\n进入下一关');
+							this.level++;
+							//下一关地图
+							this.map(this.mapData[this.level]);
+							//关数+1
+							this.levelNum(this.levelNum);
+						}
+					}
+				}
+			}
+		},
+		//关数
+		levelNum:function(){
+			document.getElementById('levelNum').innerHTML=this.level+1;
+		},
+		//获取className
+		getClass:function(className,obj){
+			var obj=obj || document;
+			if(obj.getElementsByClassName){
+				return obj.getElementsByClassName(className);
+			}else
+			{
+				var arr=[];
+				var allElements=obj.getElementsByTagName('*');
+				for (var i=0;i<allElements.length;i++ )
+				{
+					var allEchild=allElements[i].className.split(' ');
+					for (var j=0;j<allEChild.lenght;j++ )
+					{
+						if(allEChild[j].className==className)
+						{
+							arr.push(allElements[i]);
+							break;
+						}
+					}
+				}
+				return arr;
+			}
+		},
+		//过关演示存储步骤数组
+		passLevelArr:[
+			//这里只存储了第一关的自动过关
+			[40,38,37,37,39,38,38,40,39,39],
+			//其余关卡可以自己扩展
+			[]
+		],
+		//创建关卡地图，16*16的数组，草地、树、球、箱子、人物分别用0、1、2、3、4表示，可以任意摆放改变关卡
+		mapData:[
+			[
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,1,0,1,1,1,1,0,0,0,0,
+				0,0,0,0,1,1,1,3,0,3,2,1,0,0,0,0,
+				0,0,0,0,1,2,0,3,4,1,1,1,0,0,0,0,
+				0,0,0,0,1,1,1,1,3,1,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			[
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,
+				0,0,0,0,1,4,0,0,1,0,0,0,0,0,0,0,
+				0,0,0,0,1,0,3,3,1,0,1,1,1,0,0,0,
+				0,0,0,0,1,0,3,0,1,0,1,2,1,0,0,0,
+				0,0,0,0,1,1,1,0,1,1,1,2,1,0,0,0,
+				0,0,0,0,0,1,1,0,0,0,0,2,1,0,0,0,
+				0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,
+				0,0,0,0,0,1,0,0,0,1,1,1,1,0,0,0,
+				0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			[
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,
+				0,0,0,0,1,0,0,0,0,0,1,1,1,0,0,0,
+				0,0,0,1,1,3,1,1,1,0,0,0,1,0,0,0,
+				0,0,0,1,0,4,0,3,0,0,3,0,1,0,0,0,
+				0,0,0,1,0,2,2,1,0,3,0,1,1,0,0,0,
+				0,0,0,1,1,2,2,1,0,0,0,1,0,0,0,0,
+				0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			[
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,
+				0,0,0,0,1,1,0,0,1,0,0,0,0,0,0,0,
+				0,0,0,0,1,4,3,0,1,0,0,0,0,0,0,0,
+				0,0,0,0,1,1,3,0,1,1,0,0,0,0,0,0,
+				0,0,0,0,1,1,0,3,0,1,0,0,0,0,0,0,
+				0,0,0,0,1,2,3,0,0,1,0,0,0,0,0,0,
+				0,0,0,0,1,2,2,5,2,1,0,0,0,0,0,0,
+				0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			[
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,
+				0,0,0,0,0,1,4,0,1,1,1,0,0,0,0,0,
+				0,0,0,0,0,1,0,3,0,0,1,0,0,0,0,0,
+				0,0,0,0,1,1,1,0,1,0,1,1,0,0,0,0,
+				0,0,0,0,1,2,1,0,1,0,0,1,0,0,0,0,
+				0,0,0,0,1,2,3,0,0,1,0,1,0,0,0,0,
+				0,0,0,0,1,2,0,0,0,3,0,1,0,0,0,0,
+				0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			[
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,
+				0,1,1,1,1,0,0,0,0,0,1,0,0,0,0,0,
+				0,1,0,0,0,2,1,1,1,0,1,0,0,0,0,0,
+				0,1,0,1,0,1,0,0,0,0,1,1,0,0,0,0,
+				0,1,0,1,0,3,0,3,1,2,0,1,0,0,0,0,
+				0,1,0,1,0,0,5,0,0,1,0,1,0,0,0,0,
+				0,1,0,2,1,3,0,3,0,1,0,1,0,0,0,0,
+				0,1,1,0,0,0,0,1,0,1,0,1,1,1,0,0,
+				0,0,1,0,1,1,1,2,0,0,0,0,4,1,0,0,
+				0,0,1,0,0,0,0,0,1,1,0,0,0,1,0,0,
+				0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+
+		
+		]
+	};
+  </script>
+ </body>
+</html>
